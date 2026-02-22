@@ -316,12 +316,12 @@ class Pelican extends Server
             throw new \Exception('Port array must be an array');
         }
 
-        $nodes = $this->request('/api/application/nodes/deployable', 'get', [
+        $nodes = $this->request('/api/application/nodes/deployable?include=allocations', 'get', [
             'memory' => $settings['memory'],
             'disk' => $settings['disk'],
         ]);
         $nodes = collect($nodes['data']);
-        $nodes_by_id = $nodes->mapWithKeys(fn ($node) => [$node['attributes']['id'] => $node['attributes']]);
+        $nodes_by_id = $nodes->mapWithKeys(fn ($node) => [$node['attributes']['id'] => $node]);
 
         if ($settings['node']) {
             // If the product's node id is not in the deployable nodes array, throw error.
@@ -350,7 +350,7 @@ class Pelican extends Server
             }
         } else {
             foreach ($nodes as $index => $node) {
-                $availablePorts = collect($node['attributes']['relationships']['allocations']['data']);
+                $availablePorts = collect($node['relationships']['allocations']['data']);
                 $availablePorts = $availablePorts
                     ->filter(fn ($port) => !$port['attributes']['assigned'])
                     ->map(

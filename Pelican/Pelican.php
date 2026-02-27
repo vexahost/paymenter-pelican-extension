@@ -59,7 +59,19 @@ class Pelican extends Server
         ])->$method($req_url, $data);
 
         if (!$response->successful()) {
-            throw new \Exception($response->json()['errors'][0]['detail']);
+            \Log::error('Pelican API error', [
+                'url' => $req_url,
+                'method' => $method,
+                'status' => $response->status(),
+                'body' => $response->body(),
+                'data' => $data,
+            ]);
+            $json = $response->json();
+            $message = $json['errors'][0]['detail']
+                ?? $json['message']
+                ?? $json['error']
+                ?? $response->body();
+            throw new \Exception($message);
         }
 
         return $response->json() ?? [];
@@ -227,7 +239,10 @@ class Pelican extends Server
             $environment[$variable['attributes']['env_variable']] = $settings[$variable['attributes']['env_variable']] ?? $variable['attributes']['default_value'];
         }
 
-        $orderUser = $service->order->user;
+        $orderUser = $service->user ?? $service->order?->user;
+        if (!$orderUser) {
+            throw new \Exception('No user found for this service');
+        }
         // Get the user id if one already exists...
         $user = $this->request('/api/application/users', 'get', ['filter' => ['email' => $orderUser->email]])['data'][0]['attributes']['id'] ?? null;
 
@@ -268,16 +283,13 @@ class Pelican extends Server
                 'allocations' => $deploymentData['allocations_needed'] + $settings['additional_allocations'],
                 'backups' => $settings['backups'],
             ],
-            'allocation' => [
-                'default' => $deploymentData['allocations_needed'] + $settings['additional_allocations'],
-            ],
             'start_on_completion' => $settings['start_on_completion'] ?? false,
         ];
         if ($deploymentData['auto_deploy']) {
             $serverCreationData['deploy'] = [
-                'locations' => [$settings['node']] ?? [],
+                'locations' => !empty($settings['node']) ? [$settings['node']] : [],
                 'dedicated_ip' => $settings['dedicated_ip'] ?? false,
-                'port_range' => $settings['port_range'] ?? [],
+                'port_range' => !empty($settings['port_range']) ? $settings['port_range'] : ['25000-26000'],
                 'tags' => ['PaymenterDeployment'],
             ];
         } else {

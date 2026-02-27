@@ -283,9 +283,6 @@ class Pelican extends Server
                 'allocations' => $deploymentData['allocations_needed'] + $settings['additional_allocations'],
                 'backups' => $settings['backups'],
             ],
-            'allocation' => [
-                'default' => $deploymentData['allocations_needed'] + $settings['additional_allocations'],
-            ],
             'start_on_completion' => $settings['start_on_completion'] ?? false,
         ];
         if ($deploymentData['auto_deploy']) {
